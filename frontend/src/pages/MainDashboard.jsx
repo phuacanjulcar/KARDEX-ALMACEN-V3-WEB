@@ -20,7 +20,7 @@ function MainDashboard() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/alerts');
+      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/alerts');
       if (res.ok) setAlerts(await res.json());
     } catch (e) {
       console.error(e);

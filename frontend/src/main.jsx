@@ -9,9 +9,9 @@ window.fetch = async (...args) => {
   let [resource, config] = args;
   
   // Cambiar URL de localhost a Producción si existe la variable de entorno
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  if (typeof resource === 'string' && resource.startsWith('http://localhost:8000')) {
-    resource = resource.replace('http://localhost:8000', API_URL);
+  const API_URL = import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com';
+  if (typeof resource === 'string' && resource.startsWith('https://kardex-api-backend.onrender.com')) {
+    resource = resource.replace('https://kardex-api-backend.onrender.com', API_URL);
   }
   
   const sessionStr = localStorage.getItem('user');

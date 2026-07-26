@@ -13,7 +13,7 @@ function Login() {
     setError('')
     
     try {
-      const response = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/login', {
+      const response = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, pin })
@@ -39,7 +39,7 @@ function Login() {
     } catch (err) {
       setError('Error de conexión con el servidor')
     } finally {
-      setIsLoading(false)
+      
     }
   }
 
