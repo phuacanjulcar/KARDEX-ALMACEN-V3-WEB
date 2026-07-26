@@ -22,6 +22,11 @@ function AdminPanel() {
   const [selRecipeProduct, setSelRecipeProduct] = useState('');
   const [selRecipeQty, setSelRecipeQty] = useState('');
 
+  // Form State - Transferencias
+  const [transSourceProd, setTransSourceProd] = useState('');
+  const [transDestProd, setTransDestProd] = useState('');
+  const [transQty, setTransQty] = useState('');
+
   // Form State - Recepción
   const [selProduct, setSelProduct] = useState('');
   const [qty, setQty] = useState('');
@@ -253,6 +258,48 @@ function AdminPanel() {
     }
   };
 
+  const handleTransfer = async (e) => {
+    e.preventDefault();
+    if (!transSourceProd || !transDestProd || !transQty) {
+      alert("Complete todos los campos de la transferencia");
+      return;
+    }
+    if (transSourceProd === transDestProd) {
+      alert("El producto origen y destino no pueden ser el mismo");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const pSrc = products.find(p => p.id.toString() === transSourceProd);
+      const pDst = products.find(p => p.id.toString() === transDestProd);
+      
+      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_product_name: pSrc.name,
+          dest_product_name: pDst.name,
+          qty: parseFloat(transQty),
+          user: user.username
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Transferencia completada con éxito!");
+        setTransSourceProd('');
+        setTransDestProd('');
+        setTransQty('');
+        fetchData();
+      } else {
+        alert("Error: " + data.detail);
+      }
+    } catch (e) {
+      alert("Error de conexión");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -275,6 +322,12 @@ function AdminPanel() {
             onClick={() => setActiveTab('recepcion')}
           >
             📥 Recepción (Ingresos)
+          </button>
+          <button 
+            style={{ padding: '12px', textAlign: 'left', background: activeTab === 'transferencias' ? 'var(--primary)' : 'transparent', color: activeTab === 'transferencias' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            onClick={() => setActiveTab('transferencias')}
+          >
+            🔄 Transferencias
           </button>
           <button 
             style={{ padding: '12px', textAlign: 'left', background: activeTab === 'guias' ? 'var(--primary)' : 'transparent', color: activeTab === 'guias' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
@@ -549,6 +602,47 @@ function AdminPanel() {
                 <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
                   <button type="submit" className="btn-primary" disabled={isProcessing} style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}>
                     {isProcessing ? 'Procesando...' : 'Guardar Ingreso'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'transferencias' && (
+            <div>
+              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Transferencias entre Locales/Zonas</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
+                Traslada stock de un producto hacia otro restando del origen y sumando al destino automáticamente.
+              </p>
+              <form onSubmit={handleTransfer} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto Origen (Sale) *</label>
+                  <select className="input-premium" value={transSourceProd} onChange={(e) => setTransSourceProd(e.target.value)} required>
+                    <option value="">-- Seleccione origen --</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto Destino (Entra) *</label>
+                  <select className="input-premium" value={transDestProd} onChange={(e) => setTransDestProd(e.target.value)} required>
+                    <option value="">-- Seleccione destino --</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Cantidad a Transferir *</label>
+                  <input type="number" className="input-premium" step="0.01" value={transQty} onChange={(e) => setTransQty(e.target.value)} required />
+                </div>
+
+                <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
+                  <button type="submit" className="btn-primary" disabled={isProcessing} style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}>
+                    {isProcessing ? 'Procesando Transferencia...' : '🚀 Ejecutar Transferencia'}
                   </button>
                 </div>
               </form>

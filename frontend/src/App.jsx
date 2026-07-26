@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import MainDashboard from './pages/MainDashboard';
@@ -6,6 +7,15 @@ import AdminPanel from './pages/AdminPanel';
 import './index.css';
 
 function App() {
+  useEffect(() => {
+    // Keep-alive ping silencioso cada 10 minutos
+    const interval = setInterval(() => {
+      fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/kardex/stats')
+        .catch(() => {});
+    }, 600000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Router>
       <Routes>

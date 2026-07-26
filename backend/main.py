@@ -628,3 +628,59 @@ def get_kardex_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class TransferRequest(BaseModel):
+    source_product_name: str
+    dest_product_name: str
+    qty: float
+    user: str
+
+@app.post("/transfers")
+def create_transfer(req: TransferRequest, current_user: dict = Depends(get_admin_user)):
+    try:
+        from app.core.kardex_manager import KardexManager
+        import datetime
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        source_mgr = KardexManager(req.source_product_name)
+        if not source_mgr.product_id:
+            raise HTTPException(status_code=404, detail="Producto origen no encontrado")
+            
+        if source_mgr.balance['qty'] < req.qty:
+            raise HTTPException(status_code=400, detail="Stock insuficiente en origen")
+            
+        success_out = source_mgr.add_movement({
+            "type": "S",
+            "Fecha_Hora": now_str,
+            "qty": req.qty,
+            "Concepto": f"Transferencia a {req.dest_product_name}",
+            "Registrado_Por": req.user,
+            "Guia_Remision": f"TR-{int(datetime.datetime.now().timestamp())}"
+        })
+        
+        if not success_out:
+            raise HTTPException(status_code=400, detail="Fallo al descontar origen (Lotes insuficientes)")
+            
+        dest_mgr = KardexManager(req.dest_product_name)
+        if not dest_mgr.product_id:
+            raise HTTPException(status_code=404, detail="Producto destino no encontrado")
+            
+        dest_mgr.add_movement({
+            "type": "E",
+            "Fecha_Hora": now_str,
+            "qty": req.qty,
+            "unit_cost": 0.0,
+            "Concepto": f"Transferencia desde {req.source_product_name}",
+            "Registrado_Por": req.user,
+            "Guia_Remision": f"TR-{int(datetime.datetime.now().timestamp())}",
+            "lote_id": f"TR-{int(datetime.datetime.now().timestamp())}",
+            "Fecha_Vencimiento": ""
+        })
+        
+        return {"success": True, "message": "Transferencia ejecutada correctamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
