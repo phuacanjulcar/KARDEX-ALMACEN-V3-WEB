@@ -57,12 +57,12 @@ function AdminPanel() {
   const fetchData = async () => {
     try {
       const [resProd, resUsers, resCat, resZone, resDocs, resRec] = await Promise.all([
-        fetch('http://localhost:8000/products'),
-        fetch('http://localhost:8000/admin/users'),
-        fetch('http://localhost:8000/categories'),
-        fetch('http://localhost:8000/zones'),
-        fetch('http://localhost:8000/documents'),
-        fetch('http://localhost:8000/recipes')
+        fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/products'),
+        fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/admin/users'),
+        fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/categories'),
+        fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/zones'),
+        fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/documents'),
+        fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/recipes')
       ]);
       setProducts(await resProd.json());
       setUsers(await resUsers.json());
@@ -84,7 +84,7 @@ function AdminPanel() {
     
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:8000/receive', {
+      const res = await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/receive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +116,7 @@ function AdminPanel() {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:8000/admin/products', {
+      const res = await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/admin/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +138,7 @@ function AdminPanel() {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:8000/admin/users', {
+      const res = await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: uName, pin: uPin, role: uRole })
@@ -155,7 +155,7 @@ function AdminPanel() {
   const handleRunAudit = async () => {
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:8000/admin/audit');
+      const res = await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/admin/audit');
       const data = await res.json();
       if (res.ok) {
         setAuditResult(data);
@@ -177,7 +177,7 @@ function AdminPanel() {
     
     setIsProcessing(true);
     try {
-      const res = await fetch(`http://localhost:8000/recipes/${recipeId}/execute`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/recipes/${recipeId}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -344,7 +344,7 @@ function AdminPanel() {
                     e.preventDefault();
                     const name = prompt("Nombre de la nueva categoría:");
                     if (!name) return;
-                    await fetch('http://localhost:8000/categories', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
+                    await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/categories', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
                     fetchData();
                   }} style={{ marginTop: '16px' }}>
                     <button type="submit" className="btn-primary">Crear Categoría</button>
@@ -360,7 +360,7 @@ function AdminPanel() {
                     e.preventDefault();
                     const name = prompt("Nombre de la nueva zona:");
                     if (!name) return;
-                    await fetch('http://localhost:8000/zones', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, description: ''})});
+                    await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/zones', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, description: ''})});
                     fetchData();
                   }} style={{ marginTop: '16px' }}>
                     <button type="submit" className="btn-primary">Crear Zona</button>
@@ -447,7 +447,7 @@ function AdminPanel() {
                           <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{doc.date}</td>
                           <td style={{ padding: '12px' }}>{doc.user}</td>
                           <td style={{ padding: '12px' }}>
-                            <a href={`http://localhost:8000/documents/${doc.id}/pdf`} target="_blank" rel="noreferrer" 
+                            <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/documents/${doc.id}/pdf`} target="_blank" rel="noreferrer" 
                                style={{ padding: '6px 12px', background: 'var(--primary)', color: 'white', borderRadius: '4px', textDecoration: 'none', fontSize: '0.85rem' }}>
                               Ver PDF
                             </a>
