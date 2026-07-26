@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.core.database import init_db, get_connection
-from app.core.security import create_access_token, get_current_user, get_admin_user
+from app.core.security import create_access_token, get_current_user, get_admin_user, verify_password, get_password_hash
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -36,7 +36,7 @@ app.add_middleware(
 
 class LoginRequest(BaseModel):
     username: str
-    pin: str
+    password: str
 
 @app.post("/login")
 @limiter.limit("5/minute")
@@ -44,16 +44,16 @@ def login(request: Request, login_req: LoginRequest):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, role FROM users WHERE username = %s AND pin = %s", (login_req.username, login_req.pin))
+        cursor.execute("SELECT id, username, password, role FROM users WHERE username = %s", (login_req.username,))
         user = cursor.fetchone()
         conn.close()
         
-        if user:
+        if user and verify_password(login_req.password, user['password']):
             # Generar token JWT
             token = create_access_token(data={"sub": user['username'], "role": user['role']})
             return {"success": True, "token": token, "role": user['role'], "username": user['username']}
         else:
-            raise HTTPException(status_code=401, detail="Usuario o PIN incorrecto")
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrecto")
     except HTTPException:
         raise
     except Exception as e:
@@ -253,21 +253,22 @@ def get_users():
 
 class UserRequest(BaseModel):
     username: str
-    pin: str
+    password: str
     role: str
 
 @app.post("/admin/users")
 def create_user(request: UserRequest, current_user: dict = Depends(get_admin_user)):
     try:
+        hashed_password = get_password_hash(request.password)
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, pin, role) VALUES (%s, %s, %s)", 
-                       (request.username, request.pin, request.role))
+        cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
+                       (request.username, hashed_password, request.role))
         conn.commit()
         conn.close()
         return {"success": True, "message": "Usuario creado exitosamente"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="El usuario ya existe o hubo un error")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/documents")
 def get_documents():

@@ -4,7 +4,7 @@ import '../index.css'
 
 function Login() {
   const [username, setUsername] = useState('')
-  const [pin, setPin] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
@@ -16,7 +16,7 @@ function Login() {
       const response = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, pin })
+        body: JSON.stringify({ username, password })
       })
       
       const data = await response.json()
@@ -81,8 +81,8 @@ function Login() {
               type="password" 
               className="input-premium"
               placeholder="••••••••"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               style={{ letterSpacing: '0.2em', fontSize: '1.2rem', textAlign: 'center' }}
               required
             />

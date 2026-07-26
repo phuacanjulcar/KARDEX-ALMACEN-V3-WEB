@@ -47,7 +47,7 @@ function AdminPanel() {
 
   // Form State - Usuario
   const [uName, setUName] = useState('');
-  const [uPin, setUPin] = useState('');
+  const [uPassword, setUPassword] = useState('');
   const [uRole, setURole] = useState('operador');
 
   useEffect(() => {
@@ -154,11 +154,11 @@ function AdminPanel() {
       const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: uName, pin: uPin, role: uRole })
+        body: JSON.stringify({ username: uName, password: uPassword, role: uRole })
       });
       if (res.ok) {
-        alert("Usuario creado ✅");
-        setUName(''); setUPin(''); fetchData();
+        alert("Usuario creado con éxito.");
+        setUName(''); setUPassword(''); fetchData();
       } else alert("Error al crear usuario (puede que el usuario ya exista)");
     } finally {
       setIsProcessing(false);
@@ -745,8 +745,8 @@ function AdminPanel() {
                       <input type="text" className="input-premium" value={uName} onChange={(e) => setUName(e.target.value)} required />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>PIN (4 dígitos) *</label>
-                      <input type="password" maxLength={4} className="input-premium" value={uPin} onChange={(e) => setUPin(e.target.value)} required />
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Contraseña *</label>
+                      <input type="password" className="input-premium" value={uPassword} onChange={(e) => setUPassword(e.target.value)} required />
                     </div>
                     <div>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Rol *</label>
