@@ -26,7 +26,7 @@ function KardexOperativo() {
 
   const fetchInventory = async () => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/inventory');
+      const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/inventory');
       const data = await res.json();
       if (res.ok) {
         setInventory(data);
@@ -41,7 +41,7 @@ function KardexOperativo() {
     
     setIsProcessing(true);
     try {
-      const res = await fetch((import.meta.env.VITE_API_URL || '${import.meta.env.VITE_API_URL || 'http://localhost:8000'}') + '/dispatch', {
+      const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
