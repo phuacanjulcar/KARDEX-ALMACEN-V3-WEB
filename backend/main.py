@@ -42,18 +42,64 @@ class LoginRequest(BaseModel):
 @limiter.limit("5/minute")
 def login(request: Request, login_req: LoginRequest):
     try:
+        from datetime import datetime, timedelta
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, password, role FROM users WHERE username = %s", (login_req.username,))
-        user = cursor.fetchone()
-        conn.close()
         
-        if user and verify_password(login_req.password, user['password']):
+        # Load user data including anti-brute-force columns
+        cursor.execute("SELECT id, username, password, role, is_active, failed_attempts, locked_until FROM users WHERE username = %s", (login_req.username,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrecto")
+            
+        if user['is_active'] == 0:
+            conn.close()
+            raise HTTPException(status_code=403, detail="Usuario desactivado")
+            
+        # Check if locked
+        if user['locked_until']:
+            try:
+                locked_time = datetime.strptime(str(user['locked_until']), "%Y-%m-%d %H:%M:%S")
+                if datetime.now() < locked_time:
+                    conn.close()
+                    raise HTTPException(status_code=429, detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intente más tarde.")
+                else:
+                    # Bloqueo expiró
+                    cursor.execute("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE username = %s", (login_req.username,))
+                    conn.commit()
+            except ValueError:
+                pass
+        
+        # Validate password
+        if verify_password(login_req.password, user['password']):
+            # Success: reset counters
+            cursor.execute("UPDATE users SET last_login = %s, failed_attempts = 0, locked_until = NULL WHERE username = %s", 
+                           (datetime.now().strftime("%d/%m/%Y %H:%M:%S"), login_req.username))
+            conn.commit()
+            conn.close()
+            
             # Generar token JWT
             token = create_access_token(data={"sub": user['username'], "role": user['role']})
             return {"success": True, "token": token, "role": user['role'], "username": user['username']}
         else:
-            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrecto")
+            # Failure: increment attempts
+            failed_attempts = (user['failed_attempts'] or 0) + 1
+            if failed_attempts >= 3:
+                lock_time = (datetime.now() + timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute("UPDATE users SET failed_attempts = %s, locked_until = %s WHERE username = %s", 
+                               (failed_attempts, lock_time, login_req.username))
+                conn.commit()
+                conn.close()
+                raise HTTPException(status_code=429, detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intente en 5 minutos.")
+            else:
+                cursor.execute("UPDATE users SET failed_attempts = %s WHERE username = %s", 
+                               (failed_attempts, login_req.username))
+                conn.commit()
+                conn.close()
+                raise HTTPException(status_code=401, detail="Usuario o contraseña incorrecto")
+                
     except HTTPException:
         raise
     except Exception as e:
