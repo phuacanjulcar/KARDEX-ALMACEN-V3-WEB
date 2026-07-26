@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import os
+
+filepath = "c:/Users/phuac/Desktop/PROYECTOS/KARDEX ALMACEN V3 WEB/frontend/src/pages/MainDashboard.jsx"
+new_content = """import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import '../index.css';
@@ -73,24 +76,24 @@ function MainDashboard() {
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>
           <button className="btn-primary" style={{ background: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setShowInbox(!showInbox)}>
-            üîî Notificaciones {alerts.length > 0 && <span style={{ background: 'white', color: 'var(--danger)', borderRadius: '50%', padding: '2px 8px', fontSize: '0.8rem' }}>{alerts.length}</span>}
+            ?? Notificaciones {alerts.length > 0 && <span style={{ background: 'white', color: 'var(--danger)', borderRadius: '50%', padding: '2px 8px', fontSize: '0.8rem' }}>{alerts.length}</span>}
           </button>
           <button className="btn-primary" style={{ background: 'var(--text-muted)' }} onClick={handleLogout}>
-            Cerrar Sesi√≥n
+            Cerrar SesiÛn
           </button>
         </div>
       </div>
 
       {showInbox && (
         <div className="glass-panel" style={{ padding: '24px', marginBottom: '40px', borderLeft: '4px solid var(--danger)' }}>
-          <h3 style={{ color: 'var(--danger)', marginBottom: '16px' }}>üö® Alertas de Stock Cr√≠tico</h3>
+          <h3 style={{ color: 'var(--danger)', marginBottom: '16px' }}>?? Alertas de Stock CrÌtico</h3>
           {alerts.length === 0 ? (
             <p>Todo en orden, no hay stock bajo.</p>
           ) : (
             <ul style={{ paddingLeft: '20px' }}>
               {alerts.map((a, i) => (
                 <li key={i} style={{ marginBottom: '8px' }}>
-                  El producto <strong>{a.name}</strong> tiene stock <strong>{a.actual_stock}</strong> (M√≠nimo requerido: {a.min_stock})
+                  El producto <strong>{a.name}</strong> tiene stock <strong>{a.actual_stock}</strong> (MÌnimo requerido: {a.min_stock})
                 </li>
               ))}
             </ul>
@@ -98,14 +101,14 @@ function MainDashboard() {
         </div>
       )}
 
-      {/* Tarjetas de Navegaci√≥n R√°pida */}
+      {/* Tarjetas de NavegaciÛn R·pida */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '40px' }}>
         {/* Card 1: Admin Panel */}
         <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }} 
              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
              onClick={() => navigate('/admin')}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>üõ†Ô∏è</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>???</div>
           <h3>Panel de Administrador</h3>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '0.9rem' }}>
             Gestionar usuarios, auditar kardex y configurar el sistema.
@@ -117,7 +120,7 @@ function MainDashboard() {
              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
              onClick={() => navigate('/kardex')}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>üì¶</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>??</div>
           <h3>Kardex Operativo</h3>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '0.9rem' }}>
             Registrar ingresos, salidas y visualizar stock.
@@ -125,12 +128,12 @@ function MainDashboard() {
         </div>
       </div>
 
-      {/* Gr√°ficos de Datos (Recharts) */}
+      {/* Gr·ficos de Datos (Recharts) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px' }}>
         
-        {/* Gr√°fico Tendencia 7 d√≠as */}
+        {/* Gr·fico Tendencia 7 dÌas */}
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>üìä Entradas vs Salidas (√öltimos 7 d√≠as)</h3>
+          <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>?? Entradas vs Salidas (⁄ltimos 7 dÌas)</h3>
           <div style={{ height: '300px' }}>
             {stats.movements.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -138,7 +141,7 @@ function MainDashboard() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                   <XAxis dataKey="name" stroke="var(--text-muted)" />
                   <YAxis stroke="var(--text-muted)" />
-                  <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
                   <Line type="monotone" dataKey="Entradas" stroke="var(--primary)" strokeWidth={3} activeDot={{ r: 8 }} />
                   <Line type="monotone" dataKey="Salidas" stroke="var(--danger)" strokeWidth={3} />
                 </LineChart>
@@ -151,9 +154,9 @@ function MainDashboard() {
           </div>
         </div>
 
-        {/* Gr√°fico Top 5 Productos */}
+        {/* Gr·fico Top 5 Productos */}
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>üèÜ Top 5 Productos con m√°s Stock</h3>
+          <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>?? Top 5 Productos con m·s Stock</h3>
           <div style={{ height: '300px' }}>
             {stats.top_products.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -163,7 +166,7 @@ function MainDashboard() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -181,3 +184,8 @@ function MainDashboard() {
 }
 
 export default MainDashboard;
+"""
+
+with open(filepath, 'w', encoding='utf-8') as f:
+    f.write(new_content)
+

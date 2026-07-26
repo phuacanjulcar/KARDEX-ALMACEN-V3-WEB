@@ -583,3 +583,48 @@ def create_zone(req: ZoneReq, current_user: dict = Depends(get_admin_user)):
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/admin/history")
+def get_audit_history(current_user: dict = Depends(get_admin_user)):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, type, doc_number, date, user as username, products FROM document_history ORDER BY id DESC LIMIT 100")
+        history = cursor.fetchall()
+        conn.close()
+        return history
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/kardex/stats")
+def get_kardex_stats():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Últimos 7 días de movimientos
+        cursor.execute('''
+            SELECT DATE("Fecha_Hora") as d, type, SUM(qty) as total
+            FROM kardex_movements
+            WHERE "Fecha_Hora" >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY DATE("Fecha_Hora"), type
+            ORDER BY d ASC
+        ''')
+        moves = cursor.fetchall()
+        
+        # Stock actual por categoría o producto (Top 5)
+        cursor.execute('''
+            SELECT p.name, SUM(al.qty) as stock
+            FROM active_lots al
+            JOIN products p ON al.product_id = p.id
+            GROUP BY p.name
+            ORDER BY stock DESC
+            LIMIT 5
+        ''')
+        top_products = cursor.fetchall()
+        
+        conn.close()
+        return {"movements": moves, "top_products": top_products}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

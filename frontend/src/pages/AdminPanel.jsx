@@ -15,6 +15,12 @@ function AdminPanel() {
   const [documents, setDocuments] = useState([]);
   const [auditResult, setAuditResult] = useState(null);
   const [recipes, setRecipes] = useState([]);
+  const [auditHistory, setAuditHistory] = useState([]);
+  const [showRecipeForm, setShowRecipeForm] = useState(false);
+  const [newRecipeName, setNewRecipeName] = useState('');
+  const [newRecipeItems, setNewRecipeItems] = useState([]);
+  const [selRecipeProduct, setSelRecipeProduct] = useState('');
+  const [selRecipeQty, setSelRecipeQty] = useState('');
 
   // Form State - Recepción
   const [selProduct, setSelProduct] = useState('');
@@ -56,13 +62,14 @@ function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [resProd, resUsers, resCat, resZone, resDocs, resRec] = await Promise.all([
+      const [resProd, resUsers, resCat, resZone, resDocs, resRec, resHist] = await Promise.all([
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/products'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/users'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/categories'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/zones'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/documents'),
-        fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/recipes')
+        fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/recipes'),
+        fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/history')
       ]);
       setProducts(await resProd.json());
       setUsers(await resUsers.json());
@@ -70,6 +77,7 @@ function AdminPanel() {
       setZones(await resZone.json());
       setDocuments(await resDocs.json());
       setRecipes(await resRec.json());
+      if(resHist.ok) setAuditHistory(await resHist.json());
     } catch (e) {
       console.error(e);
     }
@@ -202,6 +210,49 @@ function AdminPanel() {
     }
   };
 
+  const handleCreateRecipe = async (e) => {
+    e.preventDefault();
+    if (!newRecipeName || newRecipeItems.length === 0) {
+      alert("Ingrese nombre y al menos 1 insumo");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newRecipeName,
+          created_by: user.username,
+          items: newRecipeItems
+        })
+      });
+      if (res.ok) {
+        alert("Receta creada exitosamente");
+        setNewRecipeName('');
+        setNewRecipeItems([]);
+        setShowRecipeForm(false);
+        fetchData();
+      } else {
+        alert("Error al crear receta");
+      }
+    } catch (e) {
+      alert("Error de conexión");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAddRecipeItem = () => {
+    if(!selRecipeProduct || !selRecipeQty) return;
+    const p = products.find(x => x.id.toString() === selRecipeProduct);
+    if(p) {
+      setNewRecipeItems([...newRecipeItems, { product_id: p.id, name: p.name, qty: parseFloat(selRecipeQty) }]);
+      setSelRecipeProduct('');
+      setSelRecipeQty('');
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -304,13 +355,95 @@ function AdminPanel() {
                   )}
                 </div>
               )}
+
+              <h3 style={{ marginTop: '40px', marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Historial Detallado de Movimientos</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(0,0,0,0.05)', textAlign: 'left' }}>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>ID</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Fecha</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Tipo</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Documento</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Usuario</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>PDF</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditHistory.length === 0 ? (
+                      <tr><td colSpan="6" style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)' }}>No hay historial</td></tr>
+                    ) : (
+                      auditHistory.map(row => (
+                        <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '12px' }}>{row.id}</td>
+                          <td style={{ padding: '12px' }}>{row.date}</td>
+                          <td style={{ padding: '12px', color: row.type === 'E' ? 'var(--primary)' : 'var(--danger)', fontWeight: 'bold' }}>{row.type === 'E' ? 'ENTRADA' : 'SALIDA'}</td>
+                          <td style={{ padding: '12px' }}>{row.doc_number}</td>
+                          <td style={{ padding: '12px' }}>{row.username}</td>
+                          <td style={{ padding: '12px' }}>
+                            <a href={`${import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com'}/documents/${row.id}/pdf`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 'bold' }}>
+                              Ver PDF
+                            </a>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           {activeTab === 'recetas' && (
             <div>
-              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Módulo de Producción (Recetas)</h3>
-              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>
+                <h3 style={{ margin: 0 }}>Módulo de Producción (Recetas)</h3>
+                <button className="btn-primary" onClick={() => setShowRecipeForm(!showRecipeForm)}>
+                  {showRecipeForm ? 'Cancelar' : '+ Nueva Receta'}
+                </button>
+              </div>
+
+              {showRecipeForm && (
+                <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px', borderLeft: '4px solid var(--primary)' }}>
+                  <h4>Crear Nueva Receta</h4>
+                  <form onSubmit={handleCreateRecipe} style={{ marginTop: '16px' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px' }}>Nombre de la Receta (Kit/Combo):</label>
+                      <input type="text" className="input-field" value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} required />
+                    </div>
+                    
+                    <div style={{ padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', marginBottom: '16px' }}>
+                      <h5 style={{ margin: '0 0 12px 0' }}>Insumos requeridos:</h5>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'end', marginBottom: '12px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '4px' }}>Insumo</label>
+                          <select className="input-field" value={selRecipeProduct} onChange={e => setSelRecipeProduct(e.target.value)}>
+                            <option value="">-- Seleccionar --</option>
+                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ width: '100px' }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '4px' }}>Cant.</label>
+                          <input type="number" step="0.01" className="input-field" value={selRecipeQty} onChange={e => setSelRecipeQty(e.target.value)} />
+                        </div>
+                        <button type="button" className="btn-primary" onClick={handleAddRecipeItem} style={{ padding: '12px' }}>Añadir</button>
+                      </div>
+                      
+                      {newRecipeItems.length > 0 && (
+                        <ul style={{ paddingLeft: '20px', margin: 0 }}>
+                          {newRecipeItems.map((it, idx) => (
+                            <li key={idx}><strong>{it.qty}</strong> de {it.name}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    
+                    <button type="submit" className="btn-primary" disabled={isProcessing || newRecipeItems.length === 0} style={{ width: '100%' }}>
+                      {isProcessing ? 'Guardando...' : 'Guardar Receta'}
+                    </button>
+                  </form>
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                 {recipes.length === 0 ? (
                   <p style={{ color: 'var(--text-muted)' }}>No hay recetas creadas.</p>
