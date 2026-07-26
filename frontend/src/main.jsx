@@ -33,7 +33,7 @@ window.fetch = async (...args) => {
   const response = await originalFetch(resource, config);
   
   // Interceptar 401 Unauthorized para cerrar sesión
-  if (response.status === 401 && resource !== 'http://localhost:8000/login') {
+  if (response.status === 401 && resource !== 'https://kardex-api-backend.onrender.com/login') {
     localStorage.removeItem('user');
     window.location.href = '/login';
   }
