@@ -22,6 +22,13 @@ function AdminPanel() {
   const [selRecipeProduct, setSelRecipeProduct] = useState('');
   const [selRecipeQty, setSelRecipeQty] = useState('');
 
+  // Validation States
+  const [attReceive, setAttReceive] = useState(false);
+  const [attTransfer, setAttTransfer] = useState(false);
+  const [attProduct, setAttProduct] = useState(false);
+  const [attUser, setAttUser] = useState(false);
+  const [attRecipe, setAttRecipe] = useState(false);
+
   // Form State - Transferencias
   const [transSourceProd, setTransSourceProd] = useState('');
   const [transDestProd, setTransDestProd] = useState('');
@@ -37,8 +44,9 @@ function AdminPanel() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Form State - Producto
+  const [editProductId, setEditProductId] = useState(null);
   const [pName, setPName] = useState('');
-  const [pUnit, setPUnit] = useState('Unds');
+  const [pUnit, setPUnit] = useState('Unidades (Und)');
   const [pPrefix, setPPrefix] = useState('PAQ');
   const [pMin, setPMin] = useState('10');
   const [pMax, setPMax] = useState('100');
@@ -90,8 +98,8 @@ function AdminPanel() {
 
   const handleReceive = async (e) => {
     e.preventDefault();
-    if (!selProduct || !qty || !cost || !lot) {
-      alert("Por favor complete todos los campos obligatorios.");
+    setAttReceive(true);
+    if (!selProduct || !qty || !cost || !lot || !concept) {
       return;
     }
     
@@ -115,6 +123,7 @@ function AdminPanel() {
       if (res.ok) {
         alert("Ingreso registrado correctamente ✅");
         setSelProduct(''); setQty(''); setCost(''); setLot(''); setExpDate('');
+        setAttReceive(false);
       } else {
         alert("Error: " + data.detail);
       }
@@ -125,12 +134,19 @@ function AdminPanel() {
     }
   };
 
-  const handleCreateProduct = async (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
+    setAttProduct(true);
+    if (!pName || !pCat || !pZone || !pUnit || !pPrefix || !pMin || !pMax) return;
     setIsProcessing(true);
     try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/products', {
-        method: 'POST',
+      const url = editProductId 
+        ? `${import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com'}/admin/products/${editProductId}`
+        : `${import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com'}/admin/products`;
+      const method = editProductId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: pName, unit: pUnit, prefix: pPrefix, 
@@ -139,9 +155,57 @@ function AdminPanel() {
         })
       });
       if (res.ok) {
-        alert("Producto creado ✅");
-        setPName(''); fetchData();
-      } else alert("Error al crear producto");
+        alert(`Producto ${editProductId ? 'actualizado' : 'creado'} ✅`);
+        setPName(''); setEditProductId(null); setAttProduct(false); fetchData();
+      } else alert("Error al guardar producto");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const startEditProduct = (p) => {
+    setEditProductId(p.id);
+    setPName(p.name);
+    setPCat(p.category_id || '');
+    setPZone(p.zone_id || '');
+    setPUnit(p.unit);
+    setPPrefix(p.prefix || 'PAQ');
+    setPMin(p.min_stock || 10);
+    setPMax(p.max_stock || 100);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!confirm("¿Está seguro de eliminar este producto? Se eliminará de la base de datos.")) return;
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com'}/admin/products/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert("Producto eliminado.");
+        fetchData();
+      } else alert("Error al eliminar producto");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleResetPassword = async (username) => {
+    const newPwd = prompt(`Ingrese la nueva contraseña para el usuario ${username}:`);
+    if (!newPwd) return;
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com'}/admin/users/${username}/reset`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: newPwd })
+      });
+      if (res.ok) {
+        alert("Contraseña restablecida con éxito.");
+      } else {
+        alert("Error al restablecer contraseña.");
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -149,6 +213,8 @@ function AdminPanel() {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    setAttUser(true);
+    if (!uName || !uPassword || !uRole) return;
     setIsProcessing(true);
     try {
       const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/users', {
@@ -158,7 +224,7 @@ function AdminPanel() {
       });
       if (res.ok) {
         alert("Usuario creado con éxito.");
-        setUName(''); setUPassword(''); fetchData();
+        setUName(''); setUPassword(''); setAttUser(false); fetchData();
       } else alert("Error al crear usuario (puede que el usuario ya exista)");
     } finally {
       setIsProcessing(false);
@@ -196,7 +262,7 @@ function AdminPanel() {
         body: JSON.stringify({
           user: user.username,
           batches: parseFloat(batches),
-          output_product_name: outProd,
+          output_product_name: outProd.trim().toUpperCase().replace(/\s+/g, '_'),
           lot_code: `PROD-${new Date().getTime()}`,
           expiration_date: ''
         })
@@ -217,8 +283,8 @@ function AdminPanel() {
 
   const handleCreateRecipe = async (e) => {
     e.preventDefault();
+    setAttRecipe(true);
     if (!newRecipeName || newRecipeItems.length === 0) {
-      alert("Ingrese nombre y al menos 1 insumo");
       return;
     }
     setIsProcessing(true);
@@ -237,6 +303,7 @@ function AdminPanel() {
         setNewRecipeName('');
         setNewRecipeItems([]);
         setShowRecipeForm(false);
+        setAttRecipe(false);
         fetchData();
       } else {
         alert("Error al crear receta");
@@ -260,8 +327,8 @@ function AdminPanel() {
 
   const handleTransfer = async (e) => {
     e.preventDefault();
+    setAttTransfer(true);
     if (!transSourceProd || !transDestProd || !transQty) {
-      alert("Complete todos los campos de la transferencia");
       return;
     }
     if (transSourceProd === transDestProd) {
@@ -289,6 +356,7 @@ function AdminPanel() {
         setTransSourceProd('');
         setTransDestProd('');
         setTransQty('');
+        setAttTransfer(false);
         fetchData();
       } else {
         alert("Error: " + data.detail);
@@ -313,10 +381,10 @@ function AdminPanel() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px' }}>
+      <div className="dashboard-layout">
         
         {/* Sidebar Tabs */}
-        <div className="glass-panel" style={{ width: '250px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="glass-panel sidebar">
           <button 
             style={{ padding: '12px', textAlign: 'left', background: activeTab === 'recepcion' ? 'var(--primary)' : 'transparent', color: activeTab === 'recepcion' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={() => setActiveTab('recepcion')}
@@ -410,7 +478,7 @@ function AdminPanel() {
               )}
 
               <h3 style={{ marginTop: '40px', marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Historial Detallado de Movimientos</h3>
-              <div style={{ overflowX: 'auto' }}>
+              <div className="table-container">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                   <thead>
                     <tr style={{ background: 'rgba(0,0,0,0.05)', textAlign: 'left' }}>
@@ -461,25 +529,30 @@ function AdminPanel() {
                   <h4>Crear Nueva Receta</h4>
                   <form onSubmit={handleCreateRecipe} style={{ marginTop: '16px' }}>
                     <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', marginBottom: '8px' }}>Nombre de la Receta (Kit/Combo):</label>
-                      <input type="text" className="input-field" value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} required />
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Nombre de la Receta (Kit/Combo)</label>
+                      <input type="text" className="input-premium" value={newRecipeName} onChange={e => {
+                        let val = e.target.value.toUpperCase();
+                        val = val.replace(/\s+/g, '_');
+                        setNewRecipeName(val);
+                      }} />
+                      {attRecipe && !newRecipeName && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                     </div>
                     
                     <div style={{ padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', marginBottom: '16px' }}>
                       <h5 style={{ margin: '0 0 12px 0' }}>Insumos requeridos:</h5>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'end', marginBottom: '12px' }}>
-                        <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '12px' }}>
+                        <div style={{ flex: '1 1 200px' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '4px' }}>Insumo</label>
-                          <select className="input-field" value={selRecipeProduct} onChange={e => setSelRecipeProduct(e.target.value)}>
+                          <select className="input-premium" value={selRecipeProduct} onChange={e => setSelRecipeProduct(e.target.value)}>
                             <option value="">-- Seleccionar --</option>
                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                         </div>
-                        <div style={{ width: '100px' }}>
+                        <div style={{ width: '120px' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '4px' }}>Cant.</label>
-                          <input type="number" step="0.01" className="input-field" value={selRecipeQty} onChange={e => setSelRecipeQty(e.target.value)} />
+                          <input type="number" step="0.01" className="input-premium" value={selRecipeQty} onChange={e => setSelRecipeQty(e.target.value)} />
                         </div>
-                        <button type="button" className="btn-primary" onClick={handleAddRecipeItem} style={{ padding: '12px' }}>Añadir</button>
+                        <button type="button" className="btn-primary" onClick={handleAddRecipeItem} style={{ padding: '14px', height: 'fit-content' }}>Añadir</button>
                       </div>
                       
                       {newRecipeItems.length > 0 && (
@@ -489,9 +562,10 @@ function AdminPanel() {
                           ))}
                         </ul>
                       )}
+                      {attRecipe && newRecipeItems.length === 0 && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '8px', display: 'block' }}>Agregue al menos un insumo.</span>}
                     </div>
                     
-                    <button type="submit" className="btn-primary" disabled={isProcessing || newRecipeItems.length === 0} style={{ width: '100%' }}>
+                    <button type="submit" className="btn-primary" disabled={isProcessing} style={{ width: '100%', padding: '14px' }}>
                       {isProcessing ? 'Guardando...' : 'Guardar Receta'}
                     </button>
                   </form>
@@ -523,7 +597,7 @@ function AdminPanel() {
           {activeTab === 'zonas' && (
             <div>
               <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Gestor de Zonas y Categorías</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 <div>
                   <h4>Nueva Categoría</h4>
                   <form onSubmit={async (e) => {
@@ -563,30 +637,34 @@ function AdminPanel() {
             <div>
               <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Registrar Ingreso de Mercadería</h3>
               
-              <form onSubmit={handleReceive} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <form onSubmit={handleReceive} className="form-grid">
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto *</label>
-                  <select className="input-premium" value={selProduct} onChange={(e) => setSelProduct(e.target.value)} required>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto</label>
+                  <select className="input-premium" value={selProduct} onChange={(e) => setSelProduct(e.target.value)}>
                     <option value="">-- Seleccione un producto --</option>
                     {products.map(p => (
                       <option key={p.id} value={p.name}>{p.name} ({p.unit})</option>
                     ))}
                   </select>
+                  {attReceive && !selProduct && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Cantidad *</label>
-                  <input type="number" className="input-premium" step="0.01" value={qty} onChange={(e) => setQty(e.target.value)} required />
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Cantidad</label>
+                  <input type="number" className="input-premium" step="0.01" value={qty} onChange={(e) => setQty(e.target.value)} />
+                  {attReceive && !qty && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Costo Unitario (S/.) *</label>
-                  <input type="number" className="input-premium" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} required />
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Costo Unitario (S/.)</label>
+                  <input type="number" className="input-premium" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
+                  {attReceive && !cost && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Código de Lote *</label>
-                  <input type="text" className="input-premium" placeholder="Ej: LOTE-123" value={lot} onChange={(e) => setLot(e.target.value)} required />
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Código de Lote</label>
+                  <input type="text" className="input-premium" placeholder="Ej: LOTE-123" value={lot} onChange={(e) => setLot(e.target.value)} />
+                  {attReceive && !lot && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div>
@@ -596,7 +674,8 @@ function AdminPanel() {
 
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Concepto</label>
-                  <input type="text" className="input-premium" value={concept} onChange={(e) => setConcept(e.target.value)} required />
+                  <input type="text" className="input-premium" value={concept} onChange={(e) => setConcept(e.target.value)} />
+                  {attReceive && !concept && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 
                 <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
@@ -614,30 +693,33 @@ function AdminPanel() {
               <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
                 Traslada stock de un producto hacia otro restando del origen y sumando al destino automáticamente.
               </p>
-              <form onSubmit={handleTransfer} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <form onSubmit={handleTransfer} className="form-grid">
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto Origen (Sale) *</label>
-                  <select className="input-premium" value={transSourceProd} onChange={(e) => setTransSourceProd(e.target.value)} required>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto Origen (Sale)</label>
+                  <select className="input-premium" value={transSourceProd} onChange={(e) => setTransSourceProd(e.target.value)}>
                     <option value="">-- Seleccione origen --</option>
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
                     ))}
                   </select>
+                  {attTransfer && !transSourceProd && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto Destino (Entra) *</label>
-                  <select className="input-premium" value={transDestProd} onChange={(e) => setTransDestProd(e.target.value)} required>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Producto Destino (Entra)</label>
+                  <select className="input-premium" value={transDestProd} onChange={(e) => setTransDestProd(e.target.value)}>
                     <option value="">-- Seleccione destino --</option>
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
                     ))}
                   </select>
+                  {attTransfer && !transDestProd && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Cantidad a Transferir *</label>
-                  <input type="number" className="input-premium" step="0.01" value={transQty} onChange={(e) => setTransQty(e.target.value)} required />
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Cantidad a Transferir</label>
+                  <input type="number" className="input-premium" step="0.01" value={transQty} onChange={(e) => setTransQty(e.target.value)} />
+                  {attTransfer && !transQty && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
@@ -652,7 +734,7 @@ function AdminPanel() {
           {activeTab === 'guias' && (
             <div>
               <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Historial de Guías Inmutable</h3>
-              <div style={{ overflowY: 'auto', maxHeight: '500px', border: '1px solid var(--border)', borderRadius: '12px' }}>
+              <div className="table-container" style={{ maxHeight: '500px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead style={{ background: 'rgba(0,0,0,0.02)', position: 'sticky', top: 0 }}>
                     <tr>
@@ -690,66 +772,127 @@ function AdminPanel() {
 
           {activeTab === 'productos' && (
             <div>
-              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Crear Nuevo Producto</h3>
-              <form onSubmit={handleCreateProduct} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>
+                {editProductId ? '✏️ Editar Producto' : '📦 Crear Nuevo Producto'}
+              </h3>
+              <form onSubmit={handleSaveProduct} className="form-grid">
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Nombre del Producto *</label>
-                  <input type="text" className="input-premium" value={pName} onChange={(e) => setPName(e.target.value)} required />
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Nombre del Producto</label>
+                  <input type="text" className="input-premium" value={pName} onChange={(e) => {
+                    let val = e.target.value.toUpperCase();
+                    // Al usuario le gusta que los espacios se vuelvan guiones en vivo. 
+                    // El backend se encarga de recortar (.strip) antes de guardarlo en la DB
+                    val = val.replace(/\s+/g, '_');
+                    setPName(val);
+                  }} />
+                  {attProduct && !pName && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Categoría *</label>
-                  <select className="input-premium" value={pCat} onChange={(e) => setPCat(e.target.value)} required>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Categoría</label>
+                  <select className="input-premium" value={pCat} onChange={(e) => setPCat(e.target.value)}>
                     <option value="">-- Seleccione Categoría --</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+                  {attProduct && !pCat && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Zona/Ubicación *</label>
-                  <select className="input-premium" value={pZone} onChange={(e) => setPZone(e.target.value)} required>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Zona/Ubicación</label>
+                  <select className="input-premium" value={pZone} onChange={(e) => setPZone(e.target.value)}>
                     <option value="">-- Seleccione Zona --</option>
                     {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
                   </select>
+                  {attProduct && !pZone && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Unidad de Medida</label>
-                  <input type="text" className="input-premium" value={pUnit} onChange={(e) => setPUnit(e.target.value)} required />
+                  <select className="input-premium" value={pUnit} onChange={(e) => setPUnit(e.target.value)}>
+                    <option value="Kilogramos (Kg)">Kilogramos (Kg)</option>
+                    <option value="Gramos (g)">Gramos (g)</option>
+                    <option value="Litros (L)">Litros (L)</option>
+                    <option value="Unidades (Und)">Unidades (Und)</option>
+                    <option value="Cajas">Cajas</option>
+                    <option value="Sacos">Sacos</option>
+                  </select>
+                  {attProduct && !pUnit && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Prefijo Lote</label>
-                  <input type="text" className="input-premium" value={pPrefix} onChange={(e) => setPPrefix(e.target.value)} required />
+                  <input type="text" className="input-premium" value={pPrefix} onChange={(e) => setPPrefix(e.target.value)} />
+                  {attProduct && !pPrefix && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Stock Mínimo</label>
-                  <input type="number" className="input-premium" value={pMin} onChange={(e) => setPMin(e.target.value)} required />
+                  <input type="number" className="input-premium" value={pMin} onChange={(e) => setPMin(e.target.value)} />
+                  {attProduct && !pMin && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Stock Máximo</label>
-                  <input type="number" className="input-premium" value={pMax} onChange={(e) => setPMax(e.target.value)} required />
+                  <input type="number" className="input-premium" value={pMax} onChange={(e) => setPMax(e.target.value)} />
+                  {attProduct && !pMax && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
-                <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
-                  <button type="submit" className="btn-primary" disabled={isProcessing} style={{ width: '100%' }}>Crear Producto</button>
+                <div style={{ gridColumn: 'span 2', marginTop: '16px', display: 'flex', gap: '12px' }}>
+                  <button type="submit" className="btn-primary" disabled={isProcessing} style={{ flex: 1 }}>
+                    {editProductId ? '💾 Actualizar Producto' : '➕ Crear Producto'}
+                  </button>
+                  {editProductId && (
+                    <button type="button" className="btn-primary" style={{ background: 'var(--text-muted)', flex: 1 }} onClick={() => {
+                      setEditProductId(null);
+                      setPName('');
+                    }}>
+                      ❌ Cancelar Edición
+                    </button>
+                  )}
                 </div>
               </form>
+
+              <h4 style={{ marginTop: '40px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>Inventario Maestro</h4>
+              <div className="table-container" style={{ maxHeight: '400px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-main)' }}>
+                    <tr style={{ background: 'rgba(0,0,0,0.05)', textAlign: 'left' }}>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Producto</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Unidad</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Zona</th>
+                      <th style={{ padding: '12px', borderBottom: '2px solid var(--border)' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map(p => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '12px', fontWeight: 'bold' }}>{p.name}</td>
+                        <td style={{ padding: '12px' }}>{p.unit}</td>
+                        <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{p.zone_name || 'Sin Asignar'}</td>
+                        <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
+                          <button onClick={() => startEditProduct(p)} style={{ padding: '6px 12px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>Editar</button>
+                          <button onClick={() => handleDeleteProduct(p.id)} style={{ padding: '6px 12px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>Borrar</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           {activeTab === 'usuarios' && (
             <div>
               <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Gestión de Usuarios</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+              <div className="form-grid">
                 <div>
                   <h4>Nuevo Usuario</h4>
                   <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Nombre de Usuario *</label>
-                      <input type="text" className="input-premium" value={uName} onChange={(e) => setUName(e.target.value)} required />
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Nombre de Usuario</label>
+                      <input type="text" className="input-premium" value={uName} onChange={(e) => setUName(e.target.value)} />
+                      {attUser && !uName && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Contraseña *</label>
-                      <input type="password" className="input-premium" value={uPassword} onChange={(e) => setUPassword(e.target.value)} required />
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Contraseña</label>
+                      <input type="password" className="input-premium" value={uPassword} onChange={(e) => setUPassword(e.target.value)} />
+                      {attUser && !uPassword && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Rol *</label>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Rol</label>
                       <select className="input-premium" value={uRole} onChange={(e) => setURole(e.target.value)}>
                         <option value="operador">Operador (Sólo salidas)</option>
                         <option value="admin">Administrador (Control total)</option>
@@ -766,6 +909,7 @@ function AdminPanel() {
                       <tr style={{ background: 'rgba(0,0,0,0.05)' }}>
                         <th style={{ padding: '8px', textAlign: 'left' }}>Usuario</th>
                         <th style={{ padding: '8px', textAlign: 'left' }}>Rol</th>
+                        <th style={{ padding: '8px', textAlign: 'center' }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -773,6 +917,11 @@ function AdminPanel() {
                         <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '8px' }}>{u.username}</td>
                           <td style={{ padding: '8px' }}>{u.role === 'admin' ? '⚙️ Admin' : '👤 Operador'}</td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <button onClick={() => handleResetPassword(u.username)} style={{ padding: '4px 8px', fontSize: '0.8rem', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                              🔑 Resetear Clave
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

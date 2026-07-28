@@ -99,7 +99,7 @@ function MainDashboard() {
       )}
 
       {/* Tarjetas de Navegación Rápida */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '40px' }}>
+      <div className="form-grid" style={{ marginBottom: "40px" }}>
         {/* Card 1: Admin Panel */}
         <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }} 
              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
@@ -126,7 +126,7 @@ function MainDashboard() {
       </div>
 
       {/* Gráficos de Datos (Recharts) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px' }}>
+      <div className="chart-grid">
         
         {/* Gráfico Tendencia 7 días */}
         <div className="glass-panel" style={{ padding: '24px' }}>

@@ -1,0 +1,15 @@
+# 🧠 El Cerebro: API Backend (Kardex V3)
+
+## 📌 Resumen
+Esta aplicación es el motor central del Ecosistema Kardex. Está construida en Python utilizando **FastAPI**. Su rol es vivir en la nube (Render) y servir como puente seguro entre cualquier cliente (Escritorio, Web o Móvil) y la Base de Datos (Neon PostgreSQL).
+
+## ⚙️ Funciones Principales
+- Procesa todas las reglas de negocio (Entradas, Salidas, Lotes).
+- Emite y valida Tokens JWT (Seguridad de Sesión).
+- Administra el control de Roles (Admin vs Operario).
+
+## 🛡️ Evolución y Mejoras (Lo Precario vs Lo Actual)
+En las versiones iniciales (V2), no existía un Backend; cada computadora guardaba archivos `.json` localmente. Esta arquitectura precaria generaba riesgos de pérdida de datos si la PC se dañaba, y era imposible sincronizar dos locales a la vez. 
+**Mejoras Actuales:**
+- **Base de Datos Relacional:** Se abandonó el `.json` por una BD en la nube (PostgreSQL).
+- **Parche Anti-Fuerza Bruta:** Se implementó un *Rate Limiting* estricto que bloquea IPs maliciosas y rastrea intentos fallidos, blindando el sistema contra ataques.

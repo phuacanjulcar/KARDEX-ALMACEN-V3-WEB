@@ -1,0 +1,12 @@
+# 🌐 La Cara: Interfaz Web (Kardex V3)
+
+## 📌 Resumen
+Es el portal moderno construido con **React + Vite** y CSS Vainilla. Permite a los operarios de campo y supervisores acceder al inventario desde cualquier navegador de celular o tablet, sin tener que instalar la pesada aplicación de escritorio.
+
+## ⚙️ Funciones Principales
+- Diseño *Mobile-First* (Responsivo).
+- Gráficos interactivos en tiempo real (Recharts).
+- Panel de reportes de inventario al instante.
+
+## 🛡️ Implementaciones
+Esta es una adición completamente nueva al sistema. Antes, la movilidad era del 0%. Ahora, un almacenero puede caminar por los pasillos con su celular, registrar un despacho, y este aparecerá en la computadora del Administrador en cuestión de milisegundos.

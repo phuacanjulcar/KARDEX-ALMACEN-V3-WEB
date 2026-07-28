@@ -266,6 +266,9 @@ class ProductRequest(BaseModel):
     min_stock: float
     max_stock: float
 
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+
 @app.post("/admin/products")
 def create_product(request: ProductRequest, current_user: dict = Depends(get_admin_user)):
     try:
@@ -273,16 +276,47 @@ def create_product(request: ProductRequest, current_user: dict = Depends(get_adm
         conn = get_connection()
         cursor = conn.cursor()
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Formateo estricto
+        formatted_name = request.name.strip().upper().replace(" ", "_")
         cursor.execute('''
             INSERT INTO products (name, unit, zone_id, category_id, prefix, min_stock, max_stock, created_at, is_active)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
-        ''', (request.name, request.unit, request.zone_id, request.category_id, request.prefix, request.min_stock, request.max_stock, now_str))
+        ''', (formatted_name, request.unit, request.zone_id, request.category_id, request.prefix, request.min_stock, request.max_stock, now_str))
         conn.commit()
         conn.close()
         return {"success": True, "message": "Producto creado exitosamente"}
     except Exception as e:
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/admin/products/{product_id}")
+def edit_product(product_id: int, request: ProductRequest, current_user: dict = Depends(get_admin_user)):
+    try:
+        formatted_name = request.name.strip().upper().replace(" ", "_")
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE products 
+            SET name = %s, unit = %s, zone_id = %s, category_id = %s, prefix = %s, min_stock = %s, max_stock = %s
+            WHERE id = %s
+        """, (formatted_name, request.unit, request.zone_id, request.category_id, request.prefix, request.min_stock, request.max_stock, product_id))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Producto actualizado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/admin/products/{product_id}")
+def delete_product(product_id: int, current_user: dict = Depends(get_admin_user)):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Producto eliminado"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/admin/users")
@@ -313,6 +347,21 @@ def create_user(request: UserRequest, current_user: dict = Depends(get_admin_use
         conn.commit()
         conn.close()
         return {"success": True, "message": "Usuario creado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/admin/users/{username}/reset")
+def reset_user_password(username: str, request: ResetPasswordRequest, current_user: dict = Depends(get_admin_user)):
+    try:
+        hashed_password = get_password_hash(request.new_password)
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET password = %s WHERE username = %s", (hashed_password, username))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Contraseña restablecida"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
