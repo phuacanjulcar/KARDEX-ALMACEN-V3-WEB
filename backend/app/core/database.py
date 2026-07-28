@@ -46,6 +46,14 @@ def init_db():
         )
     ''')
 
+    # Destinos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS destinations (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR UNIQUE NOT NULL
+        )
+    ''')
+
     # Productos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
