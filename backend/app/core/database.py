@@ -137,6 +137,18 @@ def init_db():
         )
     ''')
 
+    # Auditoria de Administradores
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS admin_audit (
+            id SERIAL PRIMARY KEY,
+            timestamp VARCHAR NOT NULL,
+            admin_username VARCHAR NOT NULL,
+            action VARCHAR NOT NULL,
+            target VARCHAR,
+            details VARCHAR
+        )
+    ''')
+
     # Bandeja de Entrada de Mensajes
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS messages (

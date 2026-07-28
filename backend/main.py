@@ -303,6 +303,7 @@ def edit_destination(dest_id: int, request: DestinationRequest, current_user: di
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE destinations SET name = %s WHERE id = %s", (request.name.strip(), dest_id))
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "EDIT_DESTINATION", request.name.strip(), f"ID: {dest_id}")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Destino actualizado exitosamente"}
@@ -314,7 +315,11 @@ def delete_destination(dest_id: int, current_user: dict = Depends(get_admin_user
     try:
         conn = get_connection()
         cursor = conn.cursor()
+        cursor.execute("SELECT name FROM destinations WHERE id = %s", (dest_id,))
+        row = cursor.fetchone()
+        dest_name = row["name"] if row else str(dest_id)
         cursor.execute("DELETE FROM destinations WHERE id = %s", (dest_id,))
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "DELETE_DESTINATION", dest_name, f"ID: {dest_id}")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Destino eliminado exitosamente"}
@@ -346,6 +351,7 @@ def create_product(request: ProductRequest, current_user: dict = Depends(get_adm
             INSERT INTO products (name, unit, zone_id, category_id, prefix, min_stock, max_stock, created_at, is_active)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
         ''', (formatted_name, request.unit, request.zone_id, request.category_id, request.prefix, request.min_stock, request.max_stock, now_str))
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "CREATE_PRODUCT", formatted_name, f"Unit: {request.unit}, Zone: {request.zone_id}")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Producto creado exitosamente"}
@@ -365,6 +371,7 @@ def edit_product(product_id: int, request: ProductRequest, current_user: dict = 
             SET name = %s, unit = %s, zone_id = %s, category_id = %s, prefix = %s, min_stock = %s, max_stock = %s
             WHERE id = %s
         """, (formatted_name, request.unit, request.zone_id, request.category_id, request.prefix, request.min_stock, request.max_stock, product_id))
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "EDIT_PRODUCT", formatted_name, f"ID: {product_id}")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Producto actualizado"}
@@ -376,7 +383,11 @@ def delete_product(product_id: int, current_user: dict = Depends(get_admin_user)
     try:
         conn = get_connection()
         cursor = conn.cursor()
+        cursor.execute("SELECT name FROM products WHERE id = %s", (product_id,))
+        row = cursor.fetchone()
+        prod_name = row["name"] if row else str(product_id)
         cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "DELETE_PRODUCT", prod_name, f"ID: {product_id}")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Producto eliminado"}
@@ -400,6 +411,17 @@ class UserRequest(BaseModel):
     password: str
     role: str
 
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+def log_admin_action(cursor, admin_username: str, action: str, target: str, details: str = ""):
+    import datetime
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute('''
+        INSERT INTO admin_audit (timestamp, admin_username, action, target, details)
+        VALUES (%s, %s, %s, %s, %s)
+    ''', (now_str, admin_username, action, target, details))
+
 @app.post("/admin/users")
 def create_user(request: UserRequest, current_user: dict = Depends(get_admin_user)):
     try:
@@ -408,6 +430,7 @@ def create_user(request: UserRequest, current_user: dict = Depends(get_admin_use
         cursor = conn.cursor()
         cursor.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", 
                        (request.username, hashed_password, request.role))
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "CREATE_USER", request.username, f"Role: {request.role}")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Usuario creado exitosamente"}
@@ -423,6 +446,7 @@ def reset_user_password(username: str, request: ResetPasswordRequest, current_us
         cursor.execute("UPDATE users SET password = %s WHERE username = %s", (hashed_password, username))
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        log_admin_action(cursor, current_user.get("sub", "Unknown"), "RESET_PASSWORD", username, "Password changed manually")
         conn.commit()
         conn.close()
         return {"success": True, "message": "Contraseña restablecida"}
@@ -753,6 +777,18 @@ def get_audit_history(current_user: dict = Depends(get_admin_user)):
         history = cursor.fetchall()
         conn.close()
         return history
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/admin/system_audit")
+def get_system_audit(current_user: dict = Depends(get_admin_user)):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM admin_audit ORDER BY id DESC LIMIT 200")
+        audit_logs = cursor.fetchall()
+        conn.close()
+        return audit_logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
