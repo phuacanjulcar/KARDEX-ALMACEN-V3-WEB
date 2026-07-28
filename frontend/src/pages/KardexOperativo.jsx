@@ -125,7 +125,7 @@ function KardexOperativo() {
   const handleReceive = async (e) => {
     e.preventDefault();
     setAttReceive(true);
-    if (!selProduct || !receiveQty || !receiveCost || !receiveLot || !receiveConcept) return;
+    if (!selProduct || !receiveQty || !receiveCost || !receiveLot || !receiveConcept || !receiveExpDate) return;
     
     setIsProcessing(true);
     try {
@@ -137,7 +137,7 @@ function KardexOperativo() {
           qty: parseFloat(receiveQty),
           unit_cost: parseFloat(receiveCost),
           lot_code: receiveLot,
-          expiration_date: receiveExpDate || null,
+          expiration_date: receiveExpDate,
           concept: receiveConcept,
           user: user.username
         })
@@ -370,8 +370,9 @@ function KardexOperativo() {
                 </div>
 
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Vencimiento (Opcional)</label>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Vencimiento</label>
                   <input type="date" className="input-premium" value={receiveExpDate} onChange={(e) => setReceiveExpDate(e.target.value)} />
+                  {attReceive && !receiveExpDate && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
                 <div style={{ marginBottom: '12px' }}>
