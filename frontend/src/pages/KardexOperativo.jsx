@@ -8,6 +8,7 @@ function KardexOperativo() {
   const [inventory, setInventory] = useState([]);
   const [products, setProducts] = useState([]);
   const [destinations, setDestinations] = useState([]);
+  const [zones, setZones] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Operation Mode
@@ -40,6 +41,7 @@ function KardexOperativo() {
     fetchInventory();
     fetchProducts();
     fetchDestinations();
+    fetchZones();
   }, [navigate]);
 
   const fetchInventory = async () => {
@@ -73,6 +75,17 @@ function KardexOperativo() {
       }
     } catch (error) {
       console.error("Error fetching destinations", error);
+    }
+  };
+
+  const fetchZones = async () => {
+    try {
+      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/zones');
+      if (res.ok) {
+        setZones(await res.json());
+      }
+    } catch (error) {
+      console.error("Error fetching zones", error);
     }
   };
 
@@ -301,11 +314,22 @@ function KardexOperativo() {
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Tipo de Ingreso</label>
                   <select className="input-premium" value={receiveType} onChange={(e) => {
-                    setReceiveType(e.target.value);
-                    if(e.target.value === 'Transferencia' && !receiveLot.startsWith('TRF-')) {
+                    const val = e.target.value;
+                    setReceiveType(val);
+                    if(val === 'Transferencia' && !receiveLot.startsWith('TRF-')) {
                       setReceiveLot('TRF-' + receiveLot);
-                    } else if (e.target.value !== 'Transferencia' && receiveLot.startsWith('TRF-')) {
+                    } else if (val !== 'Transferencia' && receiveLot.startsWith('TRF-')) {
                       setReceiveLot(receiveLot.replace('TRF-', ''));
+                    }
+                    
+                    if (val === 'Transferencia' || val === 'Donacion' || val === 'Ajuste') {
+                      setReceiveCost('0');
+                    }
+                    
+                    if (val === 'Transferencia') {
+                      setReceiveConcept('');
+                    } else {
+                      setReceiveConcept('Ingreso Operativo');
                     }
                   }}>
                     <option value="Compra">Compra</option>
@@ -334,7 +358,7 @@ function KardexOperativo() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Costo Unit (S/.)</label>
-                    <input type="number" min="0" className="input-premium" step="0.01" value={receiveCost} onChange={(e) => setReceiveCost(e.target.value)} />
+                    <input type="number" min="0" className="input-premium" step="0.01" value={receiveCost} onChange={(e) => setReceiveCost(e.target.value)} disabled={['Transferencia', 'Donacion', 'Ajuste'].includes(receiveType)} />
                     {attReceive && !receiveCost && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Obligatorio.</span>}
                   </div>
                 </div>
@@ -350,9 +374,18 @@ function KardexOperativo() {
                   <input type="date" className="input-premium" value={receiveExpDate} onChange={(e) => setReceiveExpDate(e.target.value)} />
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Concepto</label>
-                  <input type="text" className="input-premium" value={receiveConcept} onChange={(e) => setReceiveConcept(e.target.value)} />
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>{receiveType === 'Transferencia' ? 'Zona de Origen' : 'Concepto / Proveedor'}</label>
+                  {receiveType === 'Transferencia' ? (
+                    <select className="input-premium" value={receiveConcept} onChange={(e) => setReceiveConcept(e.target.value)}>
+                      <option value="">-- Seleccione la Zona de Origen --</option>
+                      {zones.map(z => (
+                        <option key={z.id} value={`Transferencia desde: ${z.name}`}>{z.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="text" className="input-premium" value={receiveConcept} onChange={(e) => setReceiveConcept(e.target.value)} />
+                  )}
                   {attReceive && !receiveConcept && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
                 </div>
 
