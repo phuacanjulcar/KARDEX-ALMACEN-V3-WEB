@@ -11,7 +11,7 @@ function Login() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('expired') === '1') {
-      setError("Sesión cerrada automáticamente: Has iniciado sesión en otro dispositivo.")
+      setError("⚠️ Sesión cerrada: Alguien más inició sesión en otro dispositivo con tu cuenta. Si no fuiste tú, contacta al supervisor de inmediato por posible robo de contraseña.")
     }
   }, [])
 
