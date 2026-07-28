@@ -74,14 +74,16 @@ def login(request: Request, login_req: LoginRequest):
         
         # Validate password
         if verify_password(login_req.password, user['password']):
-            # Success: reset counters
-            cursor.execute("UPDATE users SET last_login = %s, failed_attempts = 0, locked_until = NULL WHERE username = %s", 
-                           (datetime.now().strftime("%d/%m/%Y %H:%M:%S"), login_req.username))
+            import uuid
+            new_session_token = str(uuid.uuid4())
+            # Success: reset counters and set new session token
+            cursor.execute("UPDATE users SET last_login = %s, failed_attempts = 0, locked_until = NULL, session_token = %s WHERE username = %s", 
+                           (datetime.now().strftime("%d/%m/%Y %H:%M:%S"), new_session_token, login_req.username))
             conn.commit()
             conn.close()
             
-            # Generar token JWT
-            token = create_access_token(data={"sub": user['username'], "role": user['role']})
+            # Generar token JWT con el session_token
+            token = create_access_token(data={"sub": user['username'], "role": user['role'], "session": new_session_token})
             return {"success": True, "token": token, "role": user['role'], "username": user['username']}
         else:
             # Failure: increment attempts
@@ -104,6 +106,10 @@ def login(request: Request, login_req: LoginRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/auth/status")
+def check_auth_status(current_user: dict = Depends(get_current_user)):
+    return {"status": "ok"}
 
 @app.get("/")
 def read_root():

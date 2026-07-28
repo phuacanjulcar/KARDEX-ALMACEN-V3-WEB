@@ -22,8 +22,24 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         role: str = payload.get("role")
+        session_token: str = payload.get("session")
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
+            
+        from app.core.database import get_connection
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT session_token FROM users WHERE username = %s", (username,))
+        user_db = cursor.fetchone()
+        conn.close()
+        
+        if not user_db:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
+            
+        # Single Session Constraint
+        if user_db['session_token'] and session_token and user_db['session_token'] != session_token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesión cerrada: Has iniciado sesión en otro dispositivo.")
+            
         return {"username": username, "role": role}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")

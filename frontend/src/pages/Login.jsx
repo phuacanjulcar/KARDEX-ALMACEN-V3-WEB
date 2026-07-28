@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../index.css'
 
@@ -7,6 +7,13 @@ function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('expired') === '1') {
+      setError("Sesión cerrada automáticamente: Has iniciado sesión en otro dispositivo.")
+    }
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -22,11 +29,13 @@ function Login() {
       const data = await response.json()
       
       if (response.ok && data.success) {
-        localStorage.setItem('user', JSON.stringify({
+        const userData = {
           username: data.username,
           role: data.role,
           token: data.token
-        }))
+        }
+        localStorage.setItem('user', JSON.stringify(userData))
+        sessionStorage.setItem('kardex_session', JSON.stringify(userData))
         
         if (data.role === 'admin') {
           navigate('/dashboard')

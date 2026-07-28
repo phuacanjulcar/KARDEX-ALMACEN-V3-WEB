@@ -24,8 +24,13 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username VARCHAR UNIQUE NOT NULL,
-            pin VARCHAR NOT NULL,
-            role VARCHAR DEFAULT 'operador'
+            password VARCHAR NOT NULL,
+            role VARCHAR DEFAULT 'operador',
+            is_active INTEGER DEFAULT 1,
+            failed_attempts INTEGER DEFAULT 0,
+            locked_until VARCHAR,
+            last_login VARCHAR,
+            session_token VARCHAR
         )
     ''')
 
