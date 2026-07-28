@@ -145,7 +145,10 @@ def get_inventory():
             FROM active_lots a
             JOIN products p ON a.product_id = p.id
             WHERE a.qty > 0
-            ORDER BY p.name ASC, a.expiration_date ASC
+            ORDER BY 
+                p.name ASC, 
+                CASE WHEN a.expiration_date IS NULL OR a.expiration_date = '' THEN '9999-12-31' ELSE a.expiration_date END ASC, 
+                a.id ASC
         """)
         inventory = cursor.fetchall()
         conn.close()
