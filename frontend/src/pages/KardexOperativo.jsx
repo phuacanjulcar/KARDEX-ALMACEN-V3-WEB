@@ -7,6 +7,7 @@ function KardexOperativo() {
   const [user, setUser] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [products, setProducts] = useState([]);
+  const [destinations, setDestinations] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Operation Mode
@@ -15,6 +16,7 @@ function KardexOperativo() {
   // Dispatch State (Salida)
   const [selectedItem, setSelectedItem] = useState(null);
   const [dispatchQty, setDispatchQty] = useState('');
+  const [dispatchDest, setDispatchDest] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Receive State (Ingreso)
@@ -24,6 +26,7 @@ function KardexOperativo() {
   const [receiveCost, setReceiveCost] = useState('');
   const [receiveLot, setReceiveLot] = useState('');
   const [receiveExpDate, setReceiveExpDate] = useState('');
+  const [receiveType, setReceiveType] = useState('Compra');
   const [receiveConcept, setReceiveConcept] = useState('Ingreso Operativo');
 
   useEffect(() => {
@@ -36,6 +39,7 @@ function KardexOperativo() {
     setUser(JSON.parse(sessionStr));
     fetchInventory();
     fetchProducts();
+    fetchDestinations();
   }, [navigate]);
 
   const fetchInventory = async () => {
@@ -61,6 +65,17 @@ function KardexOperativo() {
     }
   };
 
+  const fetchDestinations = async () => {
+    try {
+      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/destinations');
+      if (res.ok) {
+        setDestinations(await res.json());
+      }
+    } catch (error) {
+      console.error("Error fetching destinations", error);
+    }
+  };
+
   const handleDispatch = async () => {
     if (!selectedItem || !dispatchQty || dispatchQty <= 0) return;
     
@@ -72,7 +87,8 @@ function KardexOperativo() {
         body: JSON.stringify({
           product_name: selectedItem.product_name,
           qty: parseFloat(dispatchQty),
-          user: user.username
+          user: user.username,
+          destination: dispatchDest
         })
       });
       
@@ -81,6 +97,7 @@ function KardexOperativo() {
         alert("Despacho registrado correctamente ✅");
         setSelectedItem(null);
         setDispatchQty('');
+        setDispatchDest('');
         fetchInventory(); // Refresh table
       } else {
         alert("Error: " + data.detail);
@@ -250,6 +267,12 @@ function KardexOperativo() {
                   </div>
                 )}
                 
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Destino Predeterminado (Opcional)</label>
+                <select className="input-premium" value={dispatchDest} onChange={(e) => setDispatchDest(e.target.value)} style={{ marginBottom: '16px' }}>
+                  <option value="">-- Seleccionar Destino --</option>
+                  {destinations.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                </select>
+
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Cantidad a Despachar</label>
                 <input 
                   type="number" 
@@ -274,6 +297,23 @@ function KardexOperativo() {
               <form onSubmit={handleReceive}>
                 <h4 style={{ marginBottom: '16px', color: 'var(--primary)' }}>Ingreso de Almacén</h4>
                 
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Tipo de Ingreso</label>
+                  <select className="input-premium" value={receiveType} onChange={(e) => {
+                    setReceiveType(e.target.value);
+                    if(e.target.value === 'Transferencia' && !receiveLot.startsWith('TRF-')) {
+                      setReceiveLot('TRF-' + receiveLot);
+                    } else if (e.target.value !== 'Transferencia' && receiveLot.startsWith('TRF-')) {
+                      setReceiveLot(receiveLot.replace('TRF-', ''));
+                    }
+                  }}>
+                    <option value="Compra">Compra</option>
+                    <option value="Transferencia">Transferencia Interna</option>
+                    <option value="Donacion">Donación</option>
+                    <option value="Ajuste">Ajuste de Inventario</option>
+                  </select>
+                </div>
+
                 <div style={{ marginBottom: '12px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Producto</label>
                   <select className="input-premium" value={selProduct} onChange={(e) => setSelProduct(e.target.value)}>

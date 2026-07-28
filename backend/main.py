@@ -147,10 +147,13 @@ def get_inventory():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from typing import Optional
+
 class DispatchRequest(BaseModel):
     product_name: str
     qty: float
     user: str
+    destination: Optional[str] = None
 
 @app.post("/dispatch")
 @limiter.limit("5/second")
@@ -170,13 +173,14 @@ def dispatch_product(req: Request, request: DispatchRequest, current_user: dict 
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Registrar salida
+        concept_str = f"Destino: {request.destination}" if request.destination else "Despacho Rápido Web"
         success = manager.add_movement({
             "type": "S",
             "Fecha_Hora": now_str,
             "qty": request.qty,
-            "Concepto": "Despacho Rápido Web",
+            "Concepto": concept_str,
             "Registrado_Por": request.user,
-            "Guia_Remision": "WEB-001"
+            "Guia_Remision": "VALE-WEB"
         })
         
         if success:
@@ -256,6 +260,57 @@ def get_zones():
         return zones
     except Exception as e:
         return {"error": str(e)}
+
+class DestinationRequest(BaseModel):
+    name: str
+
+@app.get("/destinations")
+def get_destinations():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM destinations ORDER BY name ASC")
+        destinations = cursor.fetchall()
+        conn.close()
+        return destinations
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/admin/destinations")
+def create_destination(request: DestinationRequest, current_user: dict = Depends(get_admin_user)):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO destinations (name) VALUES (%s)", (request.name.strip(),))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Destino creado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/admin/destinations/{dest_id}")
+def edit_destination(dest_id: int, request: DestinationRequest, current_user: dict = Depends(get_admin_user)):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE destinations SET name = %s WHERE id = %s", (request.name.strip(), dest_id))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Destino actualizado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/admin/destinations/{dest_id}")
+def delete_destination(dest_id: int, current_user: dict = Depends(get_admin_user)):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM destinations WHERE id = %s", (dest_id,))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Destino eliminado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class ProductRequest(BaseModel):
     name: str

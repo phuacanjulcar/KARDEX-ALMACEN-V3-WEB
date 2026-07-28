@@ -12,6 +12,7 @@ function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [zones, setZones] = useState([]);
+  const [destinations, setDestinations] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [auditResult, setAuditResult] = useState(null);
   const [recipes, setRecipes] = useState([]);
@@ -75,14 +76,15 @@ function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [resProd, resUsers, resCat, resZone, resDocs, resRec, resHist] = await Promise.all([
+      const [resProd, resUsers, resCat, resZone, resDocs, resRec, resHist, resDest] = await Promise.all([
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/products'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/users'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/categories'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/zones'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/documents'),
         fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/recipes'),
-        fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/history')
+        fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/history'),
+        fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/destinations')
       ]);
       setProducts(await resProd.json());
       setUsers(await resUsers.json());
@@ -91,6 +93,7 @@ function AdminPanel() {
       setDocuments(await resDocs.json());
       setRecipes(await resRec.json());
       if(resHist.ok) setAuditHistory(await resHist.json());
+      if(resDest.ok) setDestinations(await resDest.json());
     } catch (e) {
       console.error(e);
     }
@@ -401,7 +404,7 @@ function AdminPanel() {
             style={{ padding: '12px', textAlign: 'left', background: activeTab === 'guias' ? 'var(--primary)' : 'transparent', color: activeTab === 'guias' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={() => setActiveTab('guias')}
           >
-            📑 Historial de Guías
+            📑 Bandeja de Documentos
           </button>
           <button 
             style={{ padding: '12px', textAlign: 'left', background: activeTab === 'auditoria' ? 'var(--primary)' : 'transparent', color: activeTab === 'auditoria' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
@@ -419,7 +422,7 @@ function AdminPanel() {
             style={{ padding: '12px', textAlign: 'left', background: activeTab === 'zonas' ? 'var(--primary)' : 'transparent', color: activeTab === 'zonas' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={() => setActiveTab('zonas')}
           >
-            🏷️ Zonas y Categorías
+            🏷️ Zonas y Destinos
           </button>
           <button 
             style={{ padding: '12px', textAlign: 'left', background: activeTab === 'productos' ? 'var(--primary)' : 'transparent', color: activeTab === 'productos' ? 'white' : 'var(--text-main)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
@@ -596,7 +599,7 @@ function AdminPanel() {
 
           {activeTab === 'zonas' && (
             <div>
-              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Gestor de Zonas y Categorías</h3>
+              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Gestor de Zonas, Categorías y Destinos</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 <div>
                   <h4>Nueva Categoría</h4>
@@ -615,7 +618,7 @@ function AdminPanel() {
                 </div>
                 
                 <div>
-                  <h4>Nueva Zona de Almacén</h4>
+                  <h4>Nueva Zona de Almacén (Origen Físico)</h4>
                   <form onSubmit={async (e) => {
                     e.preventDefault();
                     const name = prompt("Nombre de la nueva zona:");
@@ -627,6 +630,32 @@ function AdminPanel() {
                   </form>
                   <ul style={{ marginTop: '16px', paddingLeft: '20px' }}>
                     {zones.map(z => <li key={z.id}>{z.name}</li>)}
+                  </ul>
+                </div>
+
+                <div>
+                  <h4>Nuevos Destinos Predeterminados</h4>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const name = prompt("Nombre del nuevo destino:");
+                    if (!name) return;
+                    const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/admin/destinations', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
+                    if(!res.ok) alert("Error al crear destino");
+                    fetchData();
+                  }} style={{ marginTop: '16px' }}>
+                    <button type="submit" className="btn-primary">Crear Destino</button>
+                  </form>
+                  <ul style={{ marginTop: '16px', paddingLeft: '20px' }}>
+                    {destinations.map(d => (
+                      <li key={d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '300px', marginBottom: '8px' }}>
+                        <span>{d.name}</span>
+                        <button onClick={async () => {
+                          if(!window.confirm(`¿Eliminar destino ${d.name}?`)) return;
+                          await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + `/admin/destinations/${d.id}`, { method: 'DELETE' });
+                          fetchData();
+                        }} style={{ background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem' }}>Eliminar</button>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -733,7 +762,7 @@ function AdminPanel() {
 
           {activeTab === 'guias' && (
             <div>
-              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Historial de Guías Inmutable</h3>
+              <h3 style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>Bandeja de Documentos (Guías y Vales)</h3>
               <div className="table-container" style={{ maxHeight: '500px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead style={{ background: 'rgba(0,0,0,0.02)', position: 'sticky', top: 0 }}>
