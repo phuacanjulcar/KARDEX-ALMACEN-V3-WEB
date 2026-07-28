@@ -150,10 +150,8 @@ def init_db():
         )
     ''')
 
-    # Initial Admin
-    cursor.execute("SELECT id FROM users WHERE username = 'admin'")
-    if not cursor.fetchone():
-        cursor.execute("INSERT INTO users (username, pin, role) VALUES ('admin', '4207', 'admin')")
+    # Initial Admin - REMOVED legacy pin creation to prevent crashing on Neon database where pin column is now password.
+    # Users are managed securely with bcrypt hashes.
 
     conn.commit()
     conn.close()
