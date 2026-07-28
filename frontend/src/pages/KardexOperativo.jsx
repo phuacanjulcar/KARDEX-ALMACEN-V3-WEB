@@ -278,6 +278,7 @@ function KardexOperativo() {
                   type="number" 
                   className="input-premium" 
                   placeholder="0" 
+                  min="0"
                   value={dispatchQty}
                   onChange={(e) => setDispatchQty(e.target.value)}
                   disabled={!selectedItem || isProcessing}
@@ -328,12 +329,12 @@ function KardexOperativo() {
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Cantidad</label>
-                    <input type="number" className="input-premium" step="0.01" value={receiveQty} onChange={(e) => setReceiveQty(e.target.value)} />
+                    <input type="number" min="0" className="input-premium" step="0.01" value={receiveQty} onChange={(e) => setReceiveQty(e.target.value)} />
                     {attReceive && !receiveQty && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Obligatorio.</span>}
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Costo Unit (S/.)</label>
-                    <input type="number" className="input-premium" step="0.01" value={receiveCost} onChange={(e) => setReceiveCost(e.target.value)} />
+                    <input type="number" min="0" className="input-premium" step="0.01" value={receiveCost} onChange={(e) => setReceiveCost(e.target.value)} />
                     {attReceive && !receiveCost && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Obligatorio.</span>}
                   </div>
                 </div>

@@ -98,6 +98,11 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
+select.input-premium option {
+  background-color: var(--surface);
+  color: var(--text-main);
+}
+
 /* Animations */
 @keyframes fadeInSlideUp {
   from {
