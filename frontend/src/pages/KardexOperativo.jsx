@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../index.css';
+import { apiService } from '../services/api';
+import InventoryTable from '../components/KardexOperativo/InventoryTable';
+import DispatchForm from '../components/KardexOperativo/DispatchForm';
+import ReceiveForm from '../components/KardexOperativo/ReceiveForm';
+import GuideModal from '../components/KardexOperativo/GuideModal';
 
 function KardexOperativo() {
   const navigate = useNavigate();
@@ -9,27 +14,11 @@ function KardexOperativo() {
   const [products, setProducts] = useState([]);
   const [destinations, setDestinations] = useState([]);
   const [zones, setZones] = useState([]);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [showGuide, setShowGuide] = useState(false);
-  
-  // Operation Mode
   const [operationMode, setOperationMode] = useState('salida'); // 'salida' | 'ingreso'
-
-  // Dispatch State (Salida)
   const [selectedItem, setSelectedItem] = useState(null);
-  const [dispatchQty, setDispatchQty] = useState('');
-  const [dispatchDest, setDispatchDest] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Receive State (Ingreso)
-  const [attReceive, setAttReceive] = useState(false);
-  const [selProduct, setSelProduct] = useState('');
-  const [receiveQty, setReceiveQty] = useState('');
-  const [receiveCost, setReceiveCost] = useState('');
-  const [receiveLot, setReceiveLot] = useState('');
-  const [receiveExpDate, setReceiveExpDate] = useState('');
-  const [receiveType, setReceiveType] = useState('Compra');
-  const [receiveConcept, setReceiveConcept] = useState('Ingreso Operativo');
 
   useEffect(() => {
     // Validate session
@@ -39,133 +28,26 @@ function KardexOperativo() {
       return;
     }
     setUser(JSON.parse(sessionStr));
-    fetchInventory();
-    fetchProducts();
-    fetchDestinations();
-    fetchZones();
+    fetchData();
   }, [navigate]);
 
-  const fetchInventory = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/inventory');
-      const data = await res.json();
-      if (res.ok) {
-        setInventory(data);
-      }
+      setInventory(await apiService.getInventory());
+      setProducts(await apiService.getProducts());
+      setDestinations(await apiService.getDestinations());
+      setZones(await apiService.getZones());
     } catch (error) {
-      console.error("Error fetching inventory", error);
+      console.error("Error fetching data", error);
     }
   };
 
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/products');
-      if (res.ok) {
-        setProducts(await res.json());
-      }
-    } catch (error) {
-      console.error("Error fetching products", error);
-    }
-  };
-
-  const fetchDestinations = async () => {
-    try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/destinations');
-      if (res.ok) {
-        setDestinations(await res.json());
-      }
-    } catch (error) {
-      console.error("Error fetching destinations", error);
-    }
-  };
-
-  const fetchZones = async () => {
-    try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/zones');
-      if (res.ok) {
-        setZones(await res.json());
-      }
-    } catch (error) {
-      console.error("Error fetching zones", error);
-    }
-  };
-
-  const handleDispatch = async () => {
-    if (!selectedItem || !dispatchQty || dispatchQty <= 0) return;
-    
-    setIsProcessing(true);
-    try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/dispatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product_name: selectedItem.product_name,
-          qty: parseFloat(dispatchQty),
-          user: user.username,
-          destination: dispatchDest
-        })
-      });
-      
-      const data = await res.json();
-      if (res.ok) {
-        alert("Despacho registrado correctamente ✅");
-        setSelectedItem(null);
-        setDispatchQty('');
-        setDispatchDest('');
-        fetchInventory(); // Refresh table
-      } else {
-        alert("Error: " + data.detail);
-      }
-    } catch (error) {
-      alert("Error de conexión con el servidor");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleReceive = async (e) => {
-    e.preventDefault();
-    setAttReceive(true);
-    if (!selProduct || !receiveQty || !receiveCost || !receiveLot || !receiveConcept || !receiveExpDate) return;
-    
-    setIsProcessing(true);
-    try {
-      const res = await fetch((import.meta.env.VITE_API_URL || 'https://kardex-api-backend.onrender.com') + '/receive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          product_name: selProduct,
-          qty: parseFloat(receiveQty),
-          unit_cost: parseFloat(receiveCost),
-          lot_code: receiveLot,
-          expiration_date: receiveExpDate,
-          concept: receiveConcept,
-          user: user.username
-        })
-      });
-      
-      const data = await res.json();
-      if (res.ok) {
-        alert("Ingreso registrado correctamente ✅");
-        setSelProduct(''); setReceiveQty(''); setReceiveCost(''); setReceiveLot(''); setReceiveExpDate('');
-        setAttReceive(false);
-        fetchInventory(); // Refresh table
-      } else {
-        alert("Error: " + data.detail);
-      }
-    } catch (error) {
-      alert("Error de conexión");
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleSuccess = () => {
+    setInventory([]);
+    apiService.getInventory().then(setInventory);
   };
 
   if (!user) return null;
-
-  const filteredInventory = inventory.filter(item => 
-    item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.lot_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -195,71 +77,18 @@ function KardexOperativo() {
         </div>
       </div>
 
-      {/* Main workspace */}
       <div className="operativo-layout">
-        
-        <div className="glass-panel" style={{ padding: '24px', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-          <h3>Inventario Disponible</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Busque lotes activos (para Salidas).</p>
-          
-          <input 
-            type="text" 
-            className="input-premium" 
-            placeholder="🔎 Buscar por nombre o código de lote..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ marginTop: '16px', marginBottom: '16px' }}
-          />
-          
-          <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '12px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
-                <tr>
-                  <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Producto</th>
-                  <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Lote</th>
-                  <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Stock</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInventory.length === 0 ? (
-                  <tr>
-                    <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No se encontraron productos en stock.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredInventory.map(item => {
-                    const isSelected = selectedItem?.lot_id === item.lot_id;
-                    return (
-                      <tr key={item.lot_id} 
-                          onClick={() => {
-                            if(operationMode !== 'salida') setOperationMode('salida');
-                            setSelectedItem(item);
-                          }}
-                          style={{ 
-                            borderBottom: '1px solid var(--border)', 
-                            cursor: 'pointer',
-                            background: isSelected ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-                            borderLeft: isSelected ? '4px solid var(--primary)' : '4px solid transparent'
-                          }}
-                          onMouseOver={(e) => { if(!isSelected) e.currentTarget.style.background = 'rgba(37, 99, 235, 0.05)' }}
-                          onMouseOut={(e) => { if(!isSelected) e.currentTarget.style.background = 'transparent' }}>
-                        <td style={{ padding: '12px', fontWeight: '500' }}>{item.product_name}</td>
-                        <td style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{item.lot_code}</td>
-                        <td style={{ padding: '12px', fontWeight: 'bold', color: 'var(--primary)' }}>{item.qty} {item.unit}</td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <InventoryTable 
+          inventory={inventory} 
+          searchTerm={searchTerm} 
+          setSearchTerm={setSearchTerm} 
+          selectedItem={selectedItem} 
+          setSelectedItem={setSelectedItem} 
+          setOperationMode={setOperationMode} 
+        />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
           <div className="glass-panel" style={{ padding: '24px' }}>
-            
             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
               <button 
                 style={{ flex: 1, padding: '10px', fontWeight: 'bold', cursor: 'pointer', background: operationMode === 'salida' ? 'var(--danger)' : 'transparent', color: operationMode === 'salida' ? 'white' : 'var(--text-main)', border: '1px solid var(--danger)', borderRadius: '6px' }}
@@ -276,141 +105,21 @@ function KardexOperativo() {
             </div>
 
             {operationMode === 'salida' ? (
-              <div>
-                <h4 style={{ marginBottom: '16px', color: 'var(--danger)' }}>Salida de Almacén</h4>
-                
-                {!selectedItem ? (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '16px', fontStyle: 'italic' }}>
-                    Seleccione un producto de la tabla a la izquierda para despachar.
-                  </div>
-                ) : (
-                  <div style={{ padding: '12px', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '8px', marginBottom: '16px' }}>
-                    <strong>Producto:</strong> {selectedItem.product_name} <br/>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Lote: {selectedItem.lot_code} (Stock actual: {selectedItem.qty})</span>
-                  </div>
-                )}
-                
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Destino Predeterminado (Opcional)</label>
-                <select className="input-premium" value={dispatchDest} onChange={(e) => setDispatchDest(e.target.value)} style={{ marginBottom: '16px' }}>
-                  <option value="">-- Seleccionar Destino --</option>
-                  {destinations.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
-                </select>
-
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>Cantidad a Despachar</label>
-                <input 
-                  type="number" 
-                  className="input-premium" 
-                  placeholder="0" 
-                  min="0"
-                  value={dispatchQty}
-                  onChange={(e) => setDispatchQty(e.target.value)}
-                  disabled={!selectedItem || isProcessing}
-                  style={{ marginBottom: '16px' }} 
-                />
-
-                <button 
-                  className="btn-primary" 
-                  disabled={!selectedItem || !dispatchQty || dispatchQty <= 0 || isProcessing} 
-                  style={{ width: '100%', background: 'var(--danger)', opacity: (!selectedItem || !dispatchQty || dispatchQty <= 0) ? 0.5 : 1, cursor: (!selectedItem || !dispatchQty || dispatchQty <= 0) ? 'not-allowed' : 'pointer' }}
-                  onClick={handleDispatch}
-                >
-                  {isProcessing ? "Procesando..." : "Confirmar Salida"}
-                </button>
-              </div>
+              <DispatchForm 
+                user={user} 
+                selectedItem={selectedItem} 
+                setSelectedItem={setSelectedItem} 
+                destinations={destinations} 
+                onSuccess={handleSuccess} 
+              />
             ) : (
-              <form onSubmit={handleReceive}>
-                <h4 style={{ marginBottom: '16px', color: 'var(--primary)' }}>Ingreso de Almacén</h4>
-                
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Tipo de Ingreso</label>
-                  <select className="input-premium" value={receiveType} onChange={(e) => {
-                    const val = e.target.value;
-                    setReceiveType(val);
-                    if(val === 'Transferencia' && !receiveLot.startsWith('TRF-')) {
-                      setReceiveLot('TRF-' + receiveLot);
-                    } else if (val !== 'Transferencia' && receiveLot.startsWith('TRF-')) {
-                      setReceiveLot(receiveLot.replace('TRF-', ''));
-                    }
-                    
-                    if (val === 'Transferencia' || val === 'Donacion' || val === 'Ajuste') {
-                      setReceiveCost('0');
-                    }
-                    
-                    if (val === 'Transferencia') {
-                      setReceiveConcept('');
-                    } else {
-                      setReceiveConcept('Ingreso Operativo');
-                    }
-                  }}>
-                    <option value="Compra">Compra</option>
-                    <option value="Transferencia">Transferencia Interna</option>
-                    <option value="Donacion">Donación</option>
-                    <option value="Ajuste">Ajuste de Inventario</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Producto</label>
-                  <select className="input-premium" value={selProduct} onChange={(e) => setSelProduct(e.target.value)}>
-                    <option value="">-- Seleccione un producto --</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.name}>{p.name} ({p.unit})</option>
-                    ))}
-                  </select>
-                  {attReceive && !selProduct && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Cantidad</label>
-                    <input type="number" min="0" className="input-premium" step="0.01" value={receiveQty} onChange={(e) => setReceiveQty(e.target.value)} />
-                    {attReceive && !receiveQty && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Obligatorio.</span>}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Costo Unit (S/.)</label>
-                    <input type="number" min="0" className="input-premium" step="0.01" value={receiveCost} onChange={(e) => setReceiveCost(e.target.value)} disabled={['Transferencia', 'Donacion', 'Ajuste'].includes(receiveType)} />
-                    {attReceive && !receiveCost && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>Obligatorio.</span>}
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Código de Lote</label>
-                  <input type="text" className="input-premium" placeholder="Ej: LOTE-123" value={receiveLot} onChange={(e) => setReceiveLot(e.target.value)} />
-                  {attReceive && !receiveLot && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>Vencimiento</label>
-                  <input type="date" className="input-premium" value={receiveExpDate} onChange={(e) => setReceiveExpDate(e.target.value)} />
-                  {attReceive && !receiveExpDate && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: '600' }}>{receiveType === 'Transferencia' ? 'Zona de Origen' : 'Concepto / Proveedor'}</label>
-                  {receiveType === 'Transferencia' ? (
-                    <select className="input-premium" value={receiveConcept} onChange={(e) => setReceiveConcept(e.target.value)}>
-                      <option value="">-- Seleccione la Zona de Origen --</option>
-                      {zones.map(z => (
-                        <option key={z.id} value={`Transferencia desde: ${z.name}`}>{z.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input type="text" className="input-premium" value={receiveConcept} onChange={(e) => setReceiveConcept(e.target.value)} />
-                  )}
-                  {attReceive && !receiveConcept && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>El campo es obligatorio.</span>}
-                </div>
-
-                <button 
-                  type="submit"
-                  className="btn-primary" 
-                  disabled={isProcessing} 
-                  style={{ width: '100%' }}
-                >
-                  {isProcessing ? "Procesando..." : "Confirmar Ingreso"}
-                </button>
-              </form>
+              <ReceiveForm 
+                user={user} 
+                products={products} 
+                zones={zones} 
+                onSuccess={handleSuccess} 
+              />
             )}
-
           </div>
           
           {user.role === 'admin' && (
@@ -423,51 +132,9 @@ function KardexOperativo() {
             </button>
           )}
         </div>
-
       </div>
 
-      {showGuide && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-panel" style={{ width: '600px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: 'var(--primary)' }}>📖 Guía Rápida del Sistema</h3>
-              <button onClick={() => setShowGuide(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>&times;</button>
-            </div>
-            
-            <div style={{ lineHeight: '1.6', fontSize: '0.95rem' }}>
-              <h4 style={{ color: 'var(--text-main)', marginTop: '0' }}>1. Tipos de Ingreso</h4>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li><strong>🛒 Compra:</strong> Ingreso de mercadería comprada. Requiere costo real (Prefijo PAQ-).</li>
-                <li><strong>🏢 Transferencia:</strong> Mercadería que llega desde otra sede. Costo 0 (Prefijo TRF-).</li>
-                <li><strong>🎁 Donación:</strong> Bienes recibidos gratis. Costo 0 (Prefijo DON-).</li>
-                <li><strong>⚖️ Ajuste:</strong> Para cuadrar stock sobrante físico. Costo 0 (Prefijo AJU-).</li>
-              </ul>
-
-              <h4 style={{ color: 'var(--text-main)' }}>2. Lotes y Vencimientos</h4>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li><strong>FEFO (Primero en vencer, primero en salir):</strong> El sistema ordena automáticamente los lotes y te sugiere gastar siempre lo que está más próximo a caducar.</li>
-                <li><strong>FIFO (Primero en entrar, primero en salir):</strong> Si dos productos no tienen fecha de vencimiento, o vencen el mismo día, el sistema sugerirá gastar el que ingresó hace más tiempo.</li>
-              </ul>
-
-              <h4 style={{ color: 'var(--text-main)' }}>3. Salidas y Destinos</h4>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li><strong>Stock Estricto:</strong> Nunca puedes sacar más cantidad de la que existe en un lote específico.</li>
-                <li><strong>Destino:</strong> Siempre debes indicar hacia dónde va la mercadería (Ej: Cocina, Comedor) para la auditoría.</li>
-              </ul>
-
-              <h4 style={{ color: 'var(--text-main)' }}>4. Seguridad</h4>
-              <ul style={{ paddingLeft: '20px', marginBottom: '0' }}>
-                <li><strong>Sesión Única:</strong> Si la pantalla te bota repentinamente, alguien más ingresó con tu usuario en otro dispositivo.</li>
-                <li><strong>Antifraude:</strong> La fecha y hora de todos los movimientos son automáticas basadas en el reloj del servidor central.</li>
-              </ul>
-            </div>
-            
-            <button className="btn-primary" style={{ width: '100%', marginTop: '24px' }} onClick={() => setShowGuide(false)}>
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
+      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
     </div>
   );
 }
