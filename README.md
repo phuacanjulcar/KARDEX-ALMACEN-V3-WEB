@@ -74,3 +74,15 @@ npm install
 # Levantar el proyecto
 npm run dev
 ```
+### Otra opcion
+```bash
+# Entrar directamente a traves del link fijado
+
+```
+
+
+
+
+
+
+  ##
