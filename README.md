@@ -1,12 +1,12 @@
-# 📦 KARDEX ALMACÉN V3 WEB
+# KARDEX ALMACÉN V3 WEB
 
 Sistema de control de inventarios web moderno y seguro, diseñado para reemplazar la antigua arquitectura de archivos locales por una solución robusta en la nube.
 
-## 🏗️ Arquitectura del Proyecto
+## Arquitectura del Proyecto
 
 El ecosistema está dividido en dos grandes bloques:
 
-### 1. 🧠 El Cerebro: API Backend (Kardex V3)
+### 1. El Cerebro: API Backend (Kardex V3)
 Construida en Python utilizando **FastAPI**. Su rol es vivir en la nube (Render) y servir como puente seguro entre cualquier cliente y la Base de Datos (Neon PostgreSQL).
 
 **Funciones Principales:**
@@ -19,7 +19,7 @@ Construida en Python utilizando **FastAPI**. Su rol es vivir en la nube (Render)
 - **De Local a Nube:** Se abandonó el almacenamiento local de archivos `.json` (V2) por una BD relacional en la nube (PostgreSQL), evitando la pérdida de datos y permitiendo sincronización multi-sucursal.
 - **Seguridad Anti-Fuerza Bruta:** Se implementó un *Rate Limiting* estricto (`Slowapi`) que bloquea IPs maliciosas y rastrea intentos fallidos, blindando el sistema contra ataques.
 
-### 2. 🌐 La Cara: Interfaz Web (Kardex V3)
+### 2. La Cara: Interfaz Web (Kardex V3)
 Portal moderno construido con **React + Vite** y CSS Vainilla. Permite a los operarios de campo y supervisores acceder al inventario desde cualquier navegador web, celular o tablet.
 
 **Funciones Principales:**
@@ -30,7 +30,7 @@ Portal moderno construido con **React + Vite** y CSS Vainilla. Permite a los ope
 
 ---
 
-## 🚀 Guía de Instalación Rápida (Entorno Local)
+## Guía de Instalación Rápida (Entorno Local)
 
 Sigue estos pasos para levantar el entorno de desarrollo en cualquier máquina nueva (Windows, Mac o Linux):
 
